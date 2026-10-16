@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dual Envelope Routing Challenge</title>
+    <style>
+        /* Coursera-inspired Academic UI */
+        :root {
+            --primary-blue: #0056D2;
+            --primary-hover: #00419e;
+            --secondary-teal: #007D69; /* To distinguish the Filter envelope */
+            --bg-page: #FFFFFF;
+            --bg-panel: #F5F7FA;
+            --bg-success: #E6F4EA;
+            --text-main: #1F2431;
+            --text-muted: #63636B;
+            --text-success: #0D652D;
+            --border-color: #E2E6EA;
+            --border-success: #CEEAD6;
+            --focus-ring: rgba(0, 86, 210, 0.4);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: var(--text-main);
+            background-color: var(--bg-page);
+            line-height: 1.5;
+            padding: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .simulator-container {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .description {
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+
+        .mission-banner {
+            background-color: #FFF3CD;
+            color: #856404;
+            border: 1px solid #FFEEBA;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .mission-banner.success {
+            background-color: var(--bg-success);
+            color: var(--text-success);
+            border-color: var(--border-success);
+        }
+
+        .btn-action {
+            background-color: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-bottom: 1.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .btn-action:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-action:disabled {
+            background-color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        .envelope-section {
+            background: var(--bg-page);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .envelope-section h3 {
+            margin-top: 0;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .vca-header { color: var(--primary-blue); }
+        .vcf-header { color: var(--secondary-teal); }
+
+        canvas {
+            background: var(--bg-page);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            width: 100%;
+            height: 180px;
+            display: block;
+            margin-bottom: 1.5rem;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .value-display {
+            font-weight: 400;
+            font-size: 0.85rem;
+        }
+
+        .vca-section .value-display { color: var(--primary-blue); }
+        .vcf-section .value-display { color: var(--secondary-teal); }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 0.5rem 0;
+            cursor: pointer;
+        }
+
+        /* Accent colors for sliders based on section */
+        .vcf-section input[type="range"] {
+            accent-color: var(--secondary-teal);
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        @media (max-width: 768px) {
+            .controls-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <main class="simulator-container" aria-labelledby="sim-title">
+        <h2 id="sim-title">Dual Envelope Routing Challenge</h2>
+        <p class="description">Mastering synthesis requires understanding that volume (Amplitude) and timbre (Filter) can move independently over time.</p>
+
+        <div id="mission-banner" class="mission-banner" role="status" aria-live="polite">
+            <span id="mission-icon">🎯</span>
+            <span id="mission-text"><strong>Mission:</strong> Create a "Pluck" sound. Set both Attacks to zero, use a short Filter Decay, and drop the Filter Sustain to zero.</span>
+        </div>
+
+        <div id="aria-live-feedback" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+        <button id="trigger-btn" class="btn-action" aria-label="Play a note using both envelope settings">
+            <span>🎹</span> Trigger Note (Hold for 1.5s)
+        </button>
+
+        <!-- AMPLITUDE (VCA) ENVELOPE -->
+        <section class="envelope-section vca-section">
+            <h3 class="vca-header">1. Amplitude Envelope (VCA) - Controls Volume</h3>
+            <canvas id="vca-canvas" width="800" height="180" aria-label="Amplitude envelope graph"></canvas>
+            <div class="controls-grid">
+                <div class="control-group">
+                    <label>Attack <span class="value-display" id="vca-a-val">0.50 s</span></label>
+                    <input type="range" id="vca-a" min="0.0" max="2.0" step="0.01" value="0.5" aria-label="Amplitude Attack Time">
+                </div>
+                <div class="control-group">
+                    <label>Decay <span class="value-display" id="vca-d-val">0.50 s</span></label>
+                    <input type="range" id="vca-d" min="0.01" max="2.0" step="0.01" value="0.5" aria-label="Amplitude Decay Time">
+                </div>
+                <div class="control-group">
+                    <label>Sustain <span class="value-display" id="vca-s-val">80 %</span></label>
+                    <input type="range" id="vca-s" min="0" max="1" step="0.01" value="0.8" aria-label="Amplitude Sustain Level">
+                </div>
+                <div class="control-group">
+                    <label>Release <span class="value-display" id="vca-r-val">1.00 s</span></label>
+                    <input type="range" id="vca-r" min="0.01" max="3.0" step="0.01" value="1.0" aria-label="Amplitude Release Time">
+                </div>
+            </div>
+        </section>
+
+        <!-- FILTER (VCF) ENVELOPE -->
+        <section class="envelope-section vcf-section">
+            <h3 class="vcf-header">2. Filter Envelope (VCF) - Controls Brightness</h3>
+            <canvas id="vcf-canvas" width="800" height="180" aria-label="Filter envelope graph"></canvas>
+            <div class="controls-grid">
+                <div class="control-group">
+                    <label>Attack <span class="value-display" id="vcf-a-val">0.50 s</span></label>
+                    <input type="range" id="vcf-a" min="0.0" max="2.0" step="0.01" value="0.5" aria-label="Filter Attack Time">
+                </div>
+                <div class="control-group">
+                    <label>Decay <span class="value-display" id="vcf-d-val">0.50 s</span></label>
+                    <input type="range" id="vcf-d" min="0.01" max="2.0" step="0.01" value="0.5" aria-label="Filter Decay Time">
+                </div>
+                <div class="control-group">
+                    <label>Sustain <span class="value-display" id="vcf-s-val">80 %</span></label>
+                    <input type="range" id="vcf-s" min="0" max="1" step="0.01" value="0.8" aria-label="Filter Sustain Level">
+                </div>
+                <div class="control-group">
+                    <label>Release <span class="value-display" id="vcf-r-val">1.00 s</span></label>
+                    <input type="range" id="vcf-r" min="0.01" max="3.0" step="0.01" value="1.0" aria-label="Filter Release Time">
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // State
+        const state = {
+            vca: { a: 0.5, d: 0.5, s: 0.8, r: 1.0 },
+            vcf: { a: 0.5, d: 0.5, s: 0.8, r: 1.0 }
+        };
+
+        const holdTime = 1.5; 
+        const maxTimeScale = 8.5; // Fixed X-axis scale
+        const filterBaseFreq = 100;
+        const filterPeakFreq = 4000;
+
+        // DOM Elements
+        const triggerBtn = document.getElementById('trigger-btn');
+        const ariaLiveFeedback = document.getElementById('aria-live-feedback');
+        const missionBanner = document.getElementById('mission-banner');
+        const missionIcon = document.getElementById('mission-icon');
+        const missionText = document.getElementById('mission-text');
+
+        // Canvases
+        const canvasVCA = document.getElementById('vca-canvas');
+        const ctxVCA = canvasVCA.getContext('2d');
+        const canvasVCF = document.getElementById('vcf-canvas');
+        const ctxVCF = canvasVCF.getContext('2d');
+
+        let audioCtx, isPlaying = false, noteStartTime = 0;
+        let animationFrameId, playheadTime = 0;
+
+        // UI Binding Function
+        function bindControls(type) {
+            ['a', 'd', 's', 'r'].forEach(param => {
+                const slider = document.getElementById(`${type}-${param}`);
+                const display = document.getElementById(`${type}-${param}-val`);
+                
+                slider.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    state[type][param] = val;
+                    
+                    // Update display text
+                    if (param === 's') {
+                        display.textContent = `${Math.round(val * 100)} %`;
+                        slider.setAttribute('aria-valuetext', `${Math.round(val * 100)} percent`);
+                    } else {
+                        display.textContent = `${val.toFixed(2)} s`;
+                        slider.setAttribute('aria-valuetext', `${val.toFixed(2)} seconds`);
+                    }
+                    
+                    drawEnvelopes();
+                    checkMission();
+                });
+
+                slider.addEventListener('change', () => {
+                    const names = {a: 'Attack', d: 'Decay', s: 'Sustain', r: 'Release'};
+                    const typeName = type === 'vca' ? 'Amplitude' : 'Filter';
+                    announceState(`${typeName} ${names[param]} changed.`);
+                });
+            });
+        }
+
+        bindControls('vca');
+        bindControls('vcf');
+
+        let announcementTimeout;
+        function announceState(message) {
+            clearTimeout(announcementTimeout);
+            announcementTimeout = setTimeout(() => { ariaLiveFeedback.textContent = message; }, 600);
+        }
+
+        // The "Pluck" Mission Logic
+        function checkMission() {
+            // Pluck criteria: Fast attacks, fast filter decay, zero filter sustain.
+            const isPluck = (
+                state.vca.a <= 0.05 &&
+                state.vcf.a <= 0.05 &&
+                state.vcf.d <= 0.4 &&
+                state.vcf.s <= 0.05
+            );
+
+            if (isPluck && !missionBanner.classList.contains('success')) {
+                missionBanner.classList.add('success');
+                missionIcon.textContent = '✅';
+                missionText.innerHTML = "<strong>Mission Accomplished!</strong> You created a classic synthesizer Pluck. Notice how the filter closes rapidly while the volume holds.";
+                announceState("Mission Accomplished! You created a Pluck sound.");
+            } else if (!isPluck && missionBanner.classList.contains('success')) {
+                missionBanner.classList.remove('success');
+                missionIcon.textContent = '🎯';
+                missionText.innerHTML = "<strong>Mission:</strong> Create a \"Pluck\" sound. Set both Attacks to near zero, use a short Filter Decay, and drop the Filter Sustain to zero.";
+            }
+        }
+
+        // Drawing Function
+        function drawEnvelope(ctx, envState, colorHex, rgbaFill) {
+            const width = ctx.canvas.width;
+            const height = ctx.canvas.height;
+            const padding = 20;
+            const drawWidth = width - padding * 2;
+            const drawHeight = height - padding * 2;
+
+            const { a, d, s, r } = envState;
+
+            const timeToX = (t) => padding + (t / maxTimeScale) * drawWidth;
+            
+            const x0 = timeToX(0);
+            const x1 = timeToX(a);
+            const x2 = timeToX(a + d);
+            const x3 = timeToX(a + d + holdTime);
+            const x4 = timeToX(a + d + holdTime + r);
+
+            const y0 = height - padding;
+            const y1 = padding;
+            const ySustain = height - padding - (s * drawHeight);
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Grid lines
+            ctx.strokeStyle = '#E2E6EA';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            [0, 0.5, 1].forEach(level => {
+                const y = height - padding - (level * drawHeight);
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding, y);
+            });
+            ctx.stroke();
+
+            // Fill
+            ctx.beginPath();
+            ctx.moveTo(x0, y0);
+            ctx.lineTo(x1, y1);
+            ctx.lineTo(x2, ySustain);
+            ctx.lineTo(x3, ySustain);
+            ctx.lineTo(x4, y0);
+            ctx.lineTo(x0, y0);
+            ctx.fillStyle = rgbaFill;
+            ctx.fill();
+
+            // Line
+            ctx.beginPath();
+            ctx.moveTo(x0, y0);
+            ctx.lineTo(x1, y1);
+            ctx.lineTo(x2, ySustain);
+            ctx.lineTo(x3, ySustain);
+            ctx.lineTo(x4, y0);
+            ctx.strokeStyle = colorHex;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Playhead
+            if (isPlaying) {
+                const playX = timeToX(playheadTime);
+                ctx.beginPath();
+                ctx.moveTo(playX, padding);
+                ctx.lineTo(playX, height - padding);
+                ctx.strokeStyle = '#FF5A5F';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+
+        function drawEnvelopes() {
+            drawEnvelope(ctxVCA, state.vca, '#0056D2', 'rgba(0, 86, 210, 0.15)'); // Blue for Amp
+            drawEnvelope(ctxVCF, state.vcf, '#007D69', 'rgba(0, 125, 105, 0.15)'); // Teal for Filter
+        }
+
+        // Audio Engine
+        function triggerNote() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (isPlaying) return;
+
+            isPlaying = true;
+            triggerBtn.disabled = true;
+            noteStartTime = performance.now();
+
+            const now = audioCtx.currentTime;
+
+            // Nodes
+            const osc = audioCtx.createOscillator();
+            osc.type = 'sawtooth';
+            osc.frequency.value = 110; // A2 note
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.Q.value = 2; // Slight resonance for flavor
+
+            const masterGain = audioCtx.createGain();
+
+            osc.connect(filter);
+            filter.connect(masterGain);
+            masterGain.connect(audioCtx.destination);
+
+            // --- Apply VCF Envelope ---
+            const peakFreq = filterPeakFreq;
+            const sustainFreq = filterBaseFreq + (peakFreq - filterBaseFreq) * state.vcf.s;
+            
+            filter.frequency.setValueAtTime(filterBaseFreq, now);
+            filter.frequency.linearRampToValueAtTime(peakFreq, now + state.vcf.a);
+            filter.frequency.linearRampToValueAtTime(sustainFreq, now + state.vcf.a + state.vcf.d);
+            filter.frequency.setValueAtTime(sustainFreq, now + state.vcf.a + state.vcf.d + holdTime);
+            filter.frequency.linearRampToValueAtTime(filterBaseFreq, now + state.vcf.a + state.vcf.d + holdTime + state.vcf.r);
+
+            // --- Apply VCA Envelope ---
+            masterGain.gain.setValueAtTime(0, now);
+            masterGain.gain.linearRampToValueAtTime(1.0, now + state.vca.a);
+            masterGain.gain.linearRampToValueAtTime(state.vca.s, now + state.vca.a + state.vca.d);
+            masterGain.gain.setValueAtTime(state.vca.s, now + state.vca.a + state.vca.d + holdTime);
+            masterGain.gain.linearRampToValueAtTime(0, now + state.vca.a + state.vca.d + holdTime + state.vca.r);
+
+            const totalDuration = Math.max(
+                state.vca.a + state.vca.d + holdTime + state.vca.r,
+                state.vcf.a + state.vcf.d + holdTime + state.vcf.r
+            );
+
+            osc.start(now);
+            osc.stop(now + totalDuration + 0.1);
+
+            animatePlayhead(totalDuration);
+        }
+
+        function animatePlayhead(totalDurationSecs) {
+            const elapsed = (performance.now() - noteStartTime) / 1000;
+            if (elapsed > totalDurationSecs) {
+                isPlaying = false;
+                triggerBtn.disabled = false;
+                playheadTime = 0;
+                drawEnvelopes();
+                return;
+            }
+            playheadTime = elapsed;
+            drawEnvelopes();
+            animationFrameId = requestAnimationFrame(() => animatePlayhead(totalDurationSecs));
+        }
+
+        triggerBtn.addEventListener('click', triggerNote);
+        drawEnvelopes();
+    </script>
+</body>
+</html>
